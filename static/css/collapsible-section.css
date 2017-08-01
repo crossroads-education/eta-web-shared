@@ -1,0 +1,28 @@
+.collapsible-header {
+    font-size: 1.75em;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.collapsible-header * {
+    vertical-align: middle;
+    user-select: none;
+}
+
+.collapsible-header :not(.glyphicon) {
+    font-family: 'Source Sans Pro';
+}
+
+.collapsible-title {
+    margin-left: 1em;
+}
+
+.collapsible-rotate-plus {
+    transform: rotate(-90deg);
+    transition: 0.5s;
+}
+
+.collapsible-rotate-minus {
+    transform: rotate(0deg);
+    transition: 0.5s;
+}

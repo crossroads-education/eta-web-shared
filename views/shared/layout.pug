@@ -1,0 +1,30 @@
+doctype html
+html
+    head
+        meta(charset="utf-8")
+        meta(http-equiv="X-UA-Compatible", content="IE=Edge")
+        meta(name="viewport", content="width=device-width, initial-scale=1.0")
+        block title
+            title Eta Server
+        block head
+        each url in css
+            link(href=url, rel="stylesheet", type="text/css")
+        link(href="/css" + mvcPath + ".css", rel="stylesheet", type="text/css")
+    body
+        block body
+        script(src="https://cdnjs.cloudflare.com/ajax/libs/es6-shim/0.35.3/es6-shim.min.js")
+        script(src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js")
+        script(src="https://cdnjs.cloudflare.com/ajax/libs/systemjs/0.20.12/system.js")
+        if standaloneJS
+            each path in standaloneJS
+                script(src=path)
+        script(src="/js/common.js")
+        - var jsPath = "/js" + mvcPath + ".js"
+        script
+            | SystemJS.import("jquery").then(function() {
+            | SystemJS.import("bootstrap");
+            | SystemJS.import("#{jsPath}");
+            if js
+                each path in js
+                    | SystemJS.import("#{path}");
+            | });
