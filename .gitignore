@@ -5,3 +5,4 @@ package-lock.json
 /db.ts
 /node_modules
 /static/js/typings
+/static/js/db.ts
