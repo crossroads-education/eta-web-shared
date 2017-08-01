@@ -1,9 +1,9 @@
 {
   "name": "eta-cre-web-shared",
   "version": "0.0.1",
-  "description": "Blank template for Eta v2.1 modules",
-  "homepage": "https://github.com/crossroads-education/eta-cre-blank",
-  "repository": "https://github.com/crossroads-education/eta-cre-blank.git",
+  "description": "Logic used by multiple Crossroads products for Eta v2.1+",
+  "homepage": "https://github.com/crossroads-education/eta-web-shared",
+  "repository": "https://github.com/crossroads-education/eta-web-shared.git",
   "license": "MIT",
   "contributors": [
     "Alex Hicks <alex@crossroadseducation.org> (https://alexhicks.net)"
