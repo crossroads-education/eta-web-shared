@@ -4,5 +4,6 @@ package-lock.json
 /eta.ts
 /db.ts
 /node_modules
+/static/js/node_modules
 /static/js/typings
 /static/js/db.ts

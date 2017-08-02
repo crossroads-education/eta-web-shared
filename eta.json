@@ -16,11 +16,7 @@
   },
   "lifecycleDirs": [],
   "modelDirs": [],
-  "redirects": {
-    "/home/login": "/auth/login",
-    "/home/register": "/auth/register",
-    "/home/logout": "/auth/logout"
-  },
+  "redirects": {},
   "staticDirs": ["static"],
   "transformerDirs": ["transformers"],
   "viewDirs": ["views"],
