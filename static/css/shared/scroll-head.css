@@ -1,0 +1,15 @@
+#fixed-head-container {
+    position: fixed;
+    top: 0px;
+    display: none;
+    background-color: white;
+    border-bottom: 2px solid black;
+}
+
+#fixed-head .fixed-head-hide:not(tr) {
+    display: hidden;
+}
+
+#fixed-head tr.fixed-head-hide {
+    height: 0;
+}
