@@ -5,6 +5,8 @@ let config: SystemJSLoader.Config = {
         "bootstrap": "https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js",
         "bootstrap-datepicker": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.6.4/js/bootstrap-datepicker.min.js",
         "bootstrap-editable": "https://cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.1/bootstrap3-editable/js/bootstrap-editable.min.js",
+        "bootstrap-slider": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/9.8.1/bootstrap-slider.min.js",
+        "bootstrap-switch": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-switch/3.3.4/js/bootstrap-switch.min.js",
         "chart.js": "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js",
         "d3-timer": "https://cdnjs.cloudflare.com/ajax/libs/d3-timer/1.0.6/d3-timer.min.js",
         "datatables.net": "https://cdn.datatables.net/1.10.13/js/jquery.dataTables.min.js",
