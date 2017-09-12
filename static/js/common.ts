@@ -1,6 +1,7 @@
 let config: SystemJSLoader.Config = {
     "baseURL": "/js/",
     "map": {
+        "ace": "https://cdnjs.cloudflare.com/ajax/libs/ace/1.2.8/ace.js",
         "autocomplete": "https://crossroads-cdn.s3.amazonaws.com/js/autocomplete.min.js",
         "bootstrap": "https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js",
         "bootstrap-datepicker": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.6.4/js/bootstrap-datepicker.min.js",
