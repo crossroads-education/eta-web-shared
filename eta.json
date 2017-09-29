@@ -15,12 +15,22 @@
   },
   "redirects": {},
   "dirs": {
-    "controllers": ["controllers"],
-    "models": [],
-    "staticFiles": ["static"],
-    "views": ["views"],
+    "controllers": [
+      "controllers"
+    ],
+    "models": [
+      "models"
+    ],
+    "staticFiles": [
+      "static"
+    ],
+    "views": [
+      "views"
+    ],
     "lifecycleHandlers": [],
-    "requestTransformers": ["transformers"],
+    "requestTransformers": [
+      "transformers"
+    ],
     "subpathHandlers": []
   },
   "indexes": [],
