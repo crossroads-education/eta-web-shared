@@ -11,7 +11,7 @@ export default class CssTransformer extends eta.IRequestTransformer {
         }
         this.redirects = {};
         Object.keys(eta.config.modules).forEach(k => {
-            this.redirects = eta.object.merge(eta.config.modules[k].css, this.redirects);
+            this.redirects = eta._.defaults(eta.config.modules[k].css, this.redirects);
         });
     }
 
