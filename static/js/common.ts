@@ -26,6 +26,7 @@ let config: SystemJSLoader.Config = {
         "katex": "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.7.1/katex.min.js",
         "katex-autorender": "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.7.1/contrib/auto-render.min.js",
         "linq": "https://crossroads-cdn.s3.amazonaws.com/js/linq.min.js",
+        "marked": "https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.6/marked.min.js",
         "moment": "https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js",
         "patternomaly": "https://crossroads-cdn.s3.amazonaws.com/js/patternomaly.min.js",
         "please": "https://cdnjs.cloudflare.com/ajax/libs/pleasejs/0.4.2/Please.min.js",
