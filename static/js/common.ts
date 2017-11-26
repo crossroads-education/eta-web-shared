@@ -4,6 +4,7 @@ let config: SystemJSLoader.Config = {
         "autocomplete": "https://crossroads-cdn.s3.amazonaws.com/js/autocomplete.min.js",
         "bootstrap": "https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js",
         "bootstrap-datepicker": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.6.4/js/bootstrap-datepicker.min.js",
+        "bootstrap-datetimepicker": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datetimepicker/4.17.47/js/bootstrap-datetimepicker.min.js",
         "bootstrap-editable": "https://cdnjs.cloudflare.com/ajax/libs/x-editable/1.5.1/bootstrap3-editable/js/bootstrap-editable.min.js",
         "bootstrap-slider": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/9.8.1/bootstrap-slider.min.js",
         "bootstrap-switch": "https://cdnjs.cloudflare.com/ajax/libs/bootstrap-switch/3.3.4/js/bootstrap-switch.min.js",
