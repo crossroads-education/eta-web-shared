@@ -45,7 +45,10 @@ function setupForm($form: JQuery): void {
         let canSubmit = true;
         $form.find(".form-control").each((i, e) => {
             const name: string = e.getAttribute("name");
-            const value: any = $(e).val();
+            let value: any = $(e).val();
+            if (e.getAttribute("type") === "checkbox") {
+                value = (<HTMLInputElement>e).checked;
+            }
             if (e.hasAttribute("required") && !value) {
                 canSubmit = false;
             }
