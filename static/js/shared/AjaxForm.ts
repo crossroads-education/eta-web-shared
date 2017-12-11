@@ -22,8 +22,10 @@ function setupForm($form: JQuery): void {
             url: action,
             data: params
         }).done(response => {
-            if (response.error) {
-                status.error("The server returned an error code: " + response.error);
+            if (response.error !== undefined) {
+                let message = "The server returned an error code: " + response.error;
+                if (response.message) message += ", " + response.message;
+                status.error(message);
             } else {
                 status.success("Successfully submitted the form.");
             }
