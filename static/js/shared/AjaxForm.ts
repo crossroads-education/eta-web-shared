@@ -29,9 +29,11 @@ function setupForm($form: JQuery): void {
             } else {
                 status.success("Successfully submitted the form.");
             }
+            $form.trigger("ajax-form-submitted");
         }).fail(err => {
             if (err.status === 200) status.success("Successfuly submitted the form. (Bad response code 200)");
             else status.error("An error occurred while submitting the form: " + err.statusText);
+            $form.trigger("ajax-form-submitted");
         });
     }
     if ($form[0].hasAttribute("data-notrigger")) {
