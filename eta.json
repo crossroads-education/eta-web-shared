@@ -36,6 +36,9 @@
     ],
     "subpathHandlers": []
   },
+  "dependencies": [
+    "crossroads-education/eta-auth"
+  ],
   "indexes": [],
   "name": "cre-web-shared"
 }
