@@ -5,7 +5,7 @@ export default class PermissionsTransformer extends eta.IRequestTransformer {
     public async isRequestAuthorized(permissions: any[]): Promise<boolean> {
         if (!this.isLoggedIn()) return false;
         const user: db.User = this.req.session.user;
-        return permissions.every(p => user.hasPermission(p));
+        return this.res.locals.isAuthoritativelyAuthorized || permissions.every(p => user.hasPermission(p));
     }
 
     public async onRequest(): Promise<void> {
