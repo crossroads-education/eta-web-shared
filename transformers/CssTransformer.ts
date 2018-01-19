@@ -3,30 +3,19 @@ import * as fs from "fs";
 import * as eta from "../eta";
 
 export default class CssTransformer extends eta.IRequestTransformer {
-    private static redirects: {[key: string]: string};
-
-    private static init(): void {
-        if (this.redirects) {
-            return;
-        }
-        this.redirects = {};
-        Object.keys(eta.config.modules).forEach(k => {
-            this.redirects = eta._.defaults(eta.config.modules[k].css, this.redirects);
-        });
-    }
 
     public async beforeResponse(): Promise<void> {
-        CssTransformer.init();
+        let redirects: {[key: string]: string} = {};
+        this.config.modules().forEach(m =>
+            redirects = eta._.defaults(this.config.buildToObject(`modules.${m}.css.`), redirects));
         const view: {[key: string]: any} = this.res.view;
-        if (!view["css"]) {
-            view["css"] = [];
-        }
+        if (!view["css"]) view["css"] = [];
         const css: string[] = view["css"];
         for (let i = 0; i < css.length; i++) {
             if (css[i][0] === "@") {
                 const name: string = css[i].substring(1);
-                if (CssTransformer.redirects[name]) {
-                    css[i] = CssTransformer.redirects[name];
+                if (redirects[name]) {
+                    css[i] = redirects[name];
                 } else {
                     eta.logger.warn("CSS redirect " + name + " could not be found.");
                 }

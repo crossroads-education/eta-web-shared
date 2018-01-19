@@ -3,21 +3,11 @@ import * as fs from "fs-extra";
 import * as eta from "../eta";
 
 export default class RedirectTransformer extends eta.IRequestTransformer {
-    private static redirects: {[key: string]: string};
-
-    private static init(): void {
-        if (this.redirects) {
-            return;
-        }
-        this.redirects = {};
-        Object.keys(eta.config.modules).forEach(k => {
-            this.redirects = eta._.defaults(eta.config.modules[k].redirects, this.redirects);
-        });
-    }
-
     public async onRequest(): Promise<void> {
-        RedirectTransformer.init();
-        const redirectUrl: string = RedirectTransformer.redirects[this.req.mvcPath];
+        let redirects: {[key: string]: string} = {};
+        this.config.modules().forEach(m =>
+            redirects = eta._.defaults(this.config.buildToObject(`modules.${m}.css.`), redirects));
+        const redirectUrl: string = redirects[this.req.mvcPath];
         if (redirectUrl) {
             this.redirect(redirectUrl);
         }
