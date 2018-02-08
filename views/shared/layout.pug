@@ -16,7 +16,8 @@ html
         block head
         each url in css
             link(href=url, rel="stylesheet", type="text/css")
-        link(href="/css" + mvcPath + ".css", rel="stylesheet", type="text/css")
+        if defaultCssExists
+            link(href="/css" + mvcPath + ".css", rel="stylesheet", type="text/css")
     body
         block body
         script(src="https://cdnjs.cloudflare.com/ajax/libs/es6-shim/0.35.3/es6-shim.min.js")

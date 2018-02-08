@@ -22,6 +22,7 @@ export default class CssTransformer extends eta.IRequestTransformer {
             }
         }
         view["css"] = css;
+        view.defaultCssExists = this.server.app.staticFiles[`/css${this.req.mvcPath}.css`] !== undefined;
         this.res.view = view;
     }
 }
