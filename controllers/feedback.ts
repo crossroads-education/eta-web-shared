@@ -8,7 +8,7 @@ export default class ApiFeedbackController extends eta.IHttpController {
     @eta.mvc.post()
     @eta.mvc.authorize()
     public async post({ text }: { text: string }): Promise<void> {
-        await db.feedback().save(db.feedback().create({
+        await this.db.feedback.save(this.db.feedback.create({
             author: <any>{ id: this.req.session.userid },
             text
         }));
