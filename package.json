@@ -1,6 +1,6 @@
 {
-  "name": "eta-cre-web-shared",
-  "version": "0.0.1",
+  "name": "@xroadsed/web-shared",
+  "version": "1.0.0",
   "description": "Logic used by multiple Crossroads products for Eta v2.1+",
   "homepage": "https://github.com/crossroads-education/eta-web-shared",
   "repository": "https://github.com/crossroads-education/eta-web-shared.git",
@@ -9,6 +9,6 @@
     "Alex Hicks <alex@crossroadseducation.org> (https://alexhicks.net)"
   ],
   "engines": {
-    "node": ">=0.6.10.0"
+    "node": ">=8.4.0"
   }
 }
