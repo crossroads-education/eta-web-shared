@@ -1,6 +1,5 @@
 *.js
 *.js.map
-package-lock.json
 /eta.ts
 /db.ts
 /node_modules
