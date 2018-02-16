@@ -1,3 +1,4 @@
+import * as eta from "../eta";
 import * as orm from "typeorm";
 import User from "../../cre-db-shared/models/User";
 
@@ -9,12 +10,12 @@ export default class Feedback {
     @orm.PrimaryGeneratedColumn()
     public id: number;
 
-    @orm.Column({ type: "text", nullable: false })
+    @orm.Column()
     public text: string;
 
-    @orm.Column({ type: "timestamp with time zone", nullable: false, default: "NOW()" })
+    @eta.orm.TimezoneColumn()
     public created: Date = new Date();
 
-    @orm.ManyToOne(t => User, { nullable: false })
+    @orm.ManyToOne(t => User)
     public author: User;
 }
