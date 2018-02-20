@@ -17,7 +17,7 @@ export default class PermissionsTransformer extends eta.IRequestTransformer {
             // no need to save, we just need the constructed version in-memory
             return;
         }
-        this.req.session.user = await this.db.user.findOneById(this.req.session.userid);
+        this.req.session.user = await this.db.user.findOne(this.req.session.userid);
         await this.saveSession();
     }
 }
