@@ -1,0 +1,29 @@
+mixin script()
+    //- Helper to make Atom recognize syntax highlighting properly
+    script
+        block
+
+mixin layout-css()
+    each url in css || []
+        if cssMap && cssMap[url.slice(1)]
+            - url = cssMap[url.slice(1)];
+        link(href=url, rel="stylesheet", type="text/css")
+    if defaultCssExists
+        link(href="/css" + mvcPath + ".css", rel="stylesheet", type="text/css")
+
+//- isInitialLoad should be "false" if SystemJS has already been initialized.
+mixin layout-js(isInitialLoad)
+    - const jsUrl = "/js" + mvcPath + ".js";
+    if isInitialLoad
+        - const systemJSConfig = { baseURL: "/js/", map: jsMap || {} };
+        script(src="https://cdnjs.cloudflare.com/ajax/libs/systemjs/0.20.12/system.js")
+        +script()
+            | SystemJS.config(!{JSON.stringify(systemJSConfig)});
+    each url in standaloneJS || []
+        if jsMap && jsMap[url.slice(1)]
+            - url = jsMap[url.slice(1)]
+        script(src=url)
+    +script()
+        each url in js || []
+            | SystemJS.import("#{url}");
+        | SystemJS.import("#{jsUrl}");
