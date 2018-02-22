@@ -10,7 +10,14 @@ export default class PermissionsTransformer extends eta.IRequestTransformer {
     }
 
     public async onRequest(): Promise<void> {
-        if (!this.isLoggedIn()) return;
+        if (!this.isLoggedIn()) {
+            if (!this.req.headers.authorization) return;
+            const user = await this.db.user.findOne({
+                apiToken: this.req.headers.authorization.toString().split(" ")[1]
+            });
+            if (!user) return;
+            this.req.session.userid = user.id;
+        }
         if (this.req.session.user !== undefined) {
             // session objects don't persist their methods
             this.req.session.user = this.db.user.create(this.req.session.user);
