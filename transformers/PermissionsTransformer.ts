@@ -6,7 +6,7 @@ export default class PermissionsTransformer extends eta.IRequestTransformer {
     public async isRequestAuthorized(permissions: any[]): Promise<boolean> {
         if (!this.isLoggedIn()) return false;
         const user: db.User = this.req.session.user;
-        return this.res.locals.isAuthoritativelyAuthorized || await user.hasPermissions(permissions, this.db);
+        return this.res.locals.isAuthoritativelyAuthorized || user.hasPermissions(permissions);
     }
 
     public async onRequest(): Promise<void> {
@@ -17,7 +17,9 @@ export default class PermissionsTransformer extends eta.IRequestTransformer {
             // no need to save, we just need the constructed version in-memory
             return;
         }
-        this.req.session.user = await this.db.user.findOne(this.req.session.userid);
+        this.req.session.user = await db.User.joinPermissions(this.db.user.createQueryBuilder("user"))
+            .whereInIds([this.req.session.userid])
+            .getOne();
         await this.saveSession();
     }
 }
