@@ -24,12 +24,6 @@ export default class Seeder {
     }
 
     public async start(): Promise<void> {
-        // count all rows
-        const allRowsCount = ((await this.db.connection.query("SELECT sum(n_live_tup) as count FROM pg_stat_user_tables"))[0] || {}).count;
-        if (allRowsCount !== undefined && allRowsCount > 0) {
-            eta.logger.warn("Seed attempted with pre-existing data!");
-            return;
-        }
         for (const action of this.actions) {
             await action(this);
         }
