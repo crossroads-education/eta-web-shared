@@ -3,6 +3,10 @@ import * as db from "../db";
 import * as orm from "typeorm";
 
 export default class PermissionsTransformer extends eta.IRequestTransformer {
+    public get sortOrder(): number {
+        return 0; // run before other transformers
+    }
+
     public async isRequestAuthorized(permissions: any[]): Promise<boolean> {
         if (!this.isLoggedIn()) return false;
         const user: db.User = this.req.session.user;
