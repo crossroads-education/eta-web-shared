@@ -13,7 +13,9 @@
     "views": [
       "views"
     ],
-    "lifecycleHandlers": [],
+    "lifecycleHandlers": [
+      "lifecycle"
+    ],
     "requestTransformers": [
       "transformers"
     ],

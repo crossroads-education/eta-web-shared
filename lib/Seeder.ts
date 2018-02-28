@@ -1,9 +1,10 @@
 import * as eta from "../eta";
 import * as db from "../db";
+import * as events from "events";
 import * as orm from "typeorm";
 import * as pg from "pg";
 
-export default class Seeder {
+export default class Seeder extends events.EventEmitter {
     public db: db.RepositoryManager;
     public actions: SeederAction[];
     public rows: {} = {};
@@ -19,6 +20,7 @@ export default class Seeder {
     }
 
     public constructor(db: db.RepositoryManager, actions: SeederAction[]) {
+        super();
         this.db = db;
         this.actions = actions;
     }
@@ -27,10 +29,7 @@ export default class Seeder {
         for (const action of this.actions) {
             await action(this);
         }
-        const insertedRowsCount = Object.keys(this.rows)
-            .map(k => (<any>this.rows)[k].length)
-            .reduce((p, v) => p + v, 0);
-        eta.logger.info(`Finished seeding database. Inserted ${insertedRowsCount} rows.`);
+        this.emit("end");
     }
 
     public async seed<T>(repository: orm.Repository<T>, items: T[], transformer: (query: orm.SelectQueryBuilder<T>) => orm.SelectQueryBuilder<T> = qb => qb): Promise<void> {
@@ -38,7 +37,10 @@ export default class Seeder {
         await eta.EntityCache.dumpMany(repository, items, false);
         const insertedItems: T[] = await transformer(repository.createQueryBuilder("entity")).getMany();
         (<any>this.rows)[typeName] = insertedItems;
-        eta.logger.trace(`Seeded ${typeName} with ${insertedItems.length} rows.`);
+        this.emit("progress", {
+            typeName,
+            count: insertedItems.length
+        });
     }
 
     // utilities
@@ -60,10 +62,17 @@ export default class Seeder {
 
     public getRandomDate(start = this.startDate, end = this.endDate): Date {
         return new Date(
-            eta._.random(start.getFullYear(), end.getFullYear()),
-            eta._.random(start.getMonth(), end.getMonth()),
-            eta._.random(start.getDate(), end.getDate())
+            eta._.random(start.getUTCFullYear(), end.getUTCFullYear()),
+            eta._.random(start.getUTCMonth(), end.getUTCMonth()),
+            eta._.random(start.getUTCDate(), end.getUTCDate())
         );
+    }
+
+    public randomizeTime(date: Date): Date {
+        date.setHours(eta._.random(0, 24));
+        date.setMinutes(eta._.random(0, 60));
+        date.setSeconds(eta._.random(0, 60));
+        return date;
     }
 
     public getRandomItem<T>(items: T[], allowUndefined = false): T {
