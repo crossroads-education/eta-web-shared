@@ -15,11 +15,7 @@
     ],
     "lifecycleHandlers": [
       "lifecycle"
-    ],
-    "requestTransformers": [
-      "transformers"
-    ],
-    "subpathHandlers": []
+    ]
   },
   "dependencies": [
     "crossroads-education/eta-auth"
