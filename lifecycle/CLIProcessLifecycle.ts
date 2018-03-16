@@ -4,8 +4,8 @@ import SeedController from "../controllers/cre/v1/db";
 
 export default class CLIProcessLifecycle extends eta.LifecycleHandler {
     public register(): void {
-        this.app.on("init", async () => {
-            process.on("message", msg => this.onProcessMessage.bind(this));
+        this.app.on("app:start", async () => {
+            process.on("message", this.onProcessMessage.bind(this));
         });
     }
 
