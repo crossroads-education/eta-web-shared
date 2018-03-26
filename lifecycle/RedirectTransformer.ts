@@ -11,7 +11,7 @@ export default class RedirectTransformer extends eta.LifecycleHandler {
         });
         this.app.on("request", async (http: eta.HttpRequest) => {
             const redirectUrl = this.redirects[http.req.mvcPath];
-            if (redirectUrl) eta.IRequestHandler.redirect(http.res, redirectUrl);
+            if (redirectUrl) eta.http.redirect(http.res, redirectUrl);
         });
     }
 }

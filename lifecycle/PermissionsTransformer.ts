@@ -7,13 +7,13 @@ export default class PermissionsTransformer extends eta.LifecycleHandler {
         this.app.on("request", this.onRequest.bind(this));
     }
 
-    private async isRequestAuthorized(http: eta.IRequestHandler, permissions: any[]): Promise<boolean> {
+    private async isRequestAuthorized(http: eta.RequestHandler, permissions: any[]): Promise<boolean> {
         if (!http.isLoggedIn()) return false;
         const user: db.User = http.req.session.user;
         return http.res.locals.isAuthoritativelyAuthorized || user.hasPermissions(permissions);
     }
 
-    private async onRequest(http: eta.IRequestHandler): Promise<void> {
+    private async onRequest(http: eta.RequestHandler): Promise<void> {
         await (async () => {
             if (!http.isLoggedIn()) {
                 if (!http.req.headers.authorization) return;

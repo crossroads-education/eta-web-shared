@@ -1,17 +1,17 @@
-import * as db from "../db";
-import * as eta from "../eta";
+import * as db from "@eta/db";
+import * as eta from "@eta/eta";
 
-@eta.mvc.route("/api/feedback")
-@eta.mvc.controller()
-export default class ApiFeedbackController extends eta.IHttpController {
-    @eta.mvc.raw()
-    @eta.mvc.post()
-    @eta.mvc.authorize()
-    public async post({ text }: { text: string }): Promise<void> {
+@eta.controller("/api/feedback")
+export default class ApiFeedbackController extends eta.HttpController {
+    @eta.action({
+        method: "POST",
+        isAuthRequired: true
+    })
+    async post({ text }: { text: string }) {
         await this.db.feedback.save(this.db.feedback.create({
             author: <any>{ id: this.req.session.userid },
             text
         }));
-        return this.result(0);
+        return "{}";
     }
 }

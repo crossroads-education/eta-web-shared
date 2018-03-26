@@ -1,10 +1,14 @@
-import * as eta from "../../../eta";
-import * as db from "../../../db";
+import * as eta from "@eta/eta";
+import * as db from "@eta/db";
 import Seeder from "../../../lib/Seeder";
 
-@eta.mvc.controller()
-export default class CreDbController extends eta.IHttpController {
-    public async seed(): Promise<void> {
+@eta.controller("/cre/v1/db")
+export default class CreDbController extends eta.HttpController {
+    @eta.action({
+        isAuthRequired: true,
+        permissionsRequired: ["all"]
+    })
+    async seed() {
         // count all rows
         const allRowsCount = ((await this.db.connection.query("SELECT sum(n_live_tup) as count FROM pg_stat_user_tables"))[0] || {}).count;
         if (allRowsCount !== undefined && allRowsCount > 0) {
