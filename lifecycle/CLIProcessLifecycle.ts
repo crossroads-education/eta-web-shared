@@ -7,6 +7,9 @@ export default class CLIProcessLifecycle extends eta.LifecycleHandler {
         this.app.on("app:start", async () => {
             process.on("message", this.onProcessMessage.bind(this));
         });
+        this.app.on("server:start", async () => {
+            if (process.send) process.send("eta:started");
+        });
     }
 
     private onProcessMessage(msg: string): void {
