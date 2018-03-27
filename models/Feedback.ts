@@ -16,6 +16,6 @@ export default class Feedback {
     @eta.orm.TimezoneColumn()
     public created: Date = new Date();
 
-    @orm.ManyToOne(t => User)
+    @orm.ManyToOne(() => User)
     public author: User;
 }

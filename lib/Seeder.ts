@@ -2,7 +2,6 @@ import * as eta from "../eta";
 import * as db from "../db";
 import * as events from "events";
 import * as orm from "typeorm";
-import * as pg from "pg";
 
 export default class Seeder extends events.EventEmitter {
     public db: db.RepositoryManager;

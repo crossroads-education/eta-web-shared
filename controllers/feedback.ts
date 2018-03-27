@@ -1,4 +1,3 @@
-import * as db from "@eta/db";
 import * as eta from "@eta/eta";
 
 @eta.controller("/api/feedback")

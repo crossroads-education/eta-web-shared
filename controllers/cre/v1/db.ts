@@ -1,5 +1,4 @@
 import * as eta from "@eta/eta";
-import * as db from "@eta/db";
 import Seeder from "../../../lib/Seeder";
 
 @eta.controller("/cre/v1/db")
