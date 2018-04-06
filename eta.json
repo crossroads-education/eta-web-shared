@@ -4,9 +4,7 @@
     "controllers": [
       "controllers"
     ],
-    "models": [
-      "models"
-    ],
+    "models": [],
     "staticFiles": [
       "static"
     ],
