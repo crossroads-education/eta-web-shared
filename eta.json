@@ -17,9 +17,7 @@
       "lifecycle"
     ]
   },
-  "dependencies": [
-    "crossroads-education/eta-auth"
-  ],
+  "dependencies": [],
   "indexes": [],
   "name": "cre-web-shared"
 }
