@@ -1,5 +1,5 @@
-import * as eta from "../eta";
-import * as db from "../db";
+import * as eta from "@eta/eta";
+import * as db from "@eta/db";
 import SeedController from "../controllers/cre/v1/db";
 
 export default class CLIProcessLifecycle extends eta.LifecycleHandler {

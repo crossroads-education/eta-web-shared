@@ -1,5 +1,5 @@
-import * as eta from "../eta";
-import * as db from "../db";
+import * as eta from "@eta/eta";
+import * as db from "@eta/db";
 import * as events from "events";
 import * as orm from "typeorm";
 
