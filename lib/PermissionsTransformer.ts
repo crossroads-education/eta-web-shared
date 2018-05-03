@@ -2,9 +2,11 @@ import * as eta from "@eta/eta";
 
 const PermissionsTransformer = (prefix: string): ClassDecorator => {
     return (target: any) => {
-        eta.object.forEachPath(target, (path: string[], obj: any, key: string) => {
-          if (typeof(obj[key]) !== "string") return;
-          obj[key] = prefix + path.join("/");
+        eta.object.recursiveKeys(target).forEach(keys => {
+            const item = keys.slice(0, -1).reduce((p, v) => p[v], target);
+            const last_key = keys[keys.length - 1];
+            if (typeof(item[last_key]) !== "string") return;
+            item[last_key] = prefix + keys.join("/");
         });
     };
 };
