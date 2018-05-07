@@ -14,7 +14,7 @@ export default class CreDbController extends eta.HttpController {
             eta.logger.warn("Seed attempted with pre-existing data!");
             return;
         }
-        const actions = this.server.app.getActionsWithFlag("seed", this)
+        const actions = this.app.getActionsWithFlag("seed", this)
             .sort((a, b) => <number>a.flagValue - <number>b.flagValue)
             .map(a => a.action);
         const seeder = new Seeder(this.db, actions);
@@ -22,7 +22,7 @@ export default class CreDbController extends eta.HttpController {
             typeName: string;
             count: number;
         }) => {
-            eta.logger.trace(`Seeded ${evt.typeName} with ${evt.count} rows.`);
+            eta.logger.info(`Seeded ${evt.typeName} with ${evt.count} rows.`);
         });
         await seeder.start();
         const insertedRowsCount = Object.keys(seeder.rows)
