@@ -92,6 +92,4 @@ export default class Seeder extends events.EventEmitter {
     }
 }
 
-interface SeederAction {
-    (seeder: Seeder): Promise<void>;
-}
+type SeederAction = (seeder: Seeder) => Promise<void>;
