@@ -40,28 +40,29 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                 };
             }))
         }));
-        console.log(types.find(t => t.name === "User").getFields());
         const query = new graphql.GraphQLObjectType({
             name: "RootQuery",
-            fields: eta.array.mapObject(types.map(type => ({
+            fields: eta.array.mapObject(types.map(type => <any>({
                 key: type.name,
                 value: {
                     type,
-                    args: {
-                        id: {
-                            type: new graphql.GraphQLNonNull(graphql.GraphQLInt)
-                        }
-                    },
-                    async resolve(_: any, args: { id: number; }, __: any, info: graphql.GraphQLResolveInfo) {
-                        const item: any = await orm.getConnection("localhost").getRepository(type.name).findOne(args.id);
-                        return item;
-                        // return eta.array.mapObject(info.fieldNodes[0].selectionSet.selections.map((s: graphql.FieldNode) => ({
-                        //     key: s.name.value,
-                        //     value: item[s.name.value]
-                        // })));
+                    args: { id: {
+                        type: new graphql.GraphQLNonNull(graphql.GraphQLInt)
+                    } },
+                    resolve(_: any, args: { id: number; }) {
+                        return orm.getConnection("localhost").getRepository(type.name).findOne(args.id);
                     }
                 }
-            })))
+            })).concat(types.map(type => ({
+                key: type.name + "s",
+                value: {
+                    type: new graphql.GraphQLList(type),
+                    args: { },
+                    resolve() {
+                        return orm.getConnection("localhost").getRepository(type.name).find();
+                    }
+                }
+            }))))
         });
         this.app.server.express.use("/graphql", expressGraphQL({
             schema: new graphql.GraphQLSchema({
