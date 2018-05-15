@@ -7,6 +7,7 @@
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "preserveConstEnums": true,
+    "skipLibCheck": true,
     "sourceMap": true
   },
   "compileOnSave": true,
