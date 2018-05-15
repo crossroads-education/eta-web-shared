@@ -54,6 +54,10 @@ export default class Seeder extends events.EventEmitter {
                 pair.start.setFullYear(pair.end.getFullYear());
                 pair.start.setMonth(pair.end.getMonth());
                 pair.start.setDate(pair.end.getDate());
+                pair.start = this.randomizeTime(pair.start);
+                do {
+                    pair.end = this.randomizeTime(pair.end);
+                } while (pair.end.getTime() <= pair.start.getTime());
             }
         } while (pair.end.getTime() < pair.start.getTime());
         return pair;
