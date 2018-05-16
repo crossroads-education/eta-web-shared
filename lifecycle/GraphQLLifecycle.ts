@@ -1,4 +1,6 @@
 import * as eta from "@eta/eta";
+import * as db from "@eta/db";
+import * as express from "express";
 import * as graphql from "graphql";
 import * as expressGraphQL from "express-graphql";
 import * as orm from "typeorm";
@@ -9,11 +11,13 @@ const INT_TYPES: string[] = ["int", "int2", "int4", "int8", "integer", "smallint
 const STRING_TYPES: string[] = ["character varying", "character", "varchar", "char", "text", "String"];
 
 export default class GraphQLLifecycle extends eta.LifecycleHandler {
+    static middleware: expressGraphQL.Middleware;
+
     register() {
-        this.app.on("server:middleware:before", this.onDatabaseConnect.bind(this));
+        this.app.on("server:middleware:before", this.setupGraphQL.bind(this));
     }
 
-    async onDatabaseConnect() {
+    async setupGraphQL() {
         const types = orm.getConnection("localhost").entityMetadatas.map(entity => new graphql.GraphQLObjectType({
             name: entity.name,
             fields: () => eta.array.mapObject(entity.ownColumns.map(col => {
@@ -46,11 +50,14 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                 key: type.name,
                 value: {
                     type,
-                    args: { id: {
-                        type: new graphql.GraphQLNonNull(graphql.GraphQLInt)
-                    } },
-                    resolve(_: any, args: { id: number; }) {
-                        return orm.getConnection("localhost").getRepository(type.name).findOne(args.id);
+                    args: {
+                        id: { type: new graphql.GraphQLNonNull(graphql.GraphQLInt) }
+                    },
+                    resolve: (_: any, args: { id: number; }, req: express.Request, info: graphql.GraphQLResolveInfo) => {
+                        if (!this.checkPermissions(req, ["GraphQL/" + type.name + "/Read"])) {
+                            throw new graphql.GraphQLError("Not allowed to access " + type.name, info.fieldNodes[0]);
+                        }
+                        return orm.getConnection(req.hostname).getRepository(type.name).findOne(args.id);
                     }
                 }
             })).concat(types.map(type => ({
@@ -58,17 +65,26 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                 value: {
                     type: new graphql.GraphQLList(type),
                     args: { },
-                    resolve() {
-                        return orm.getConnection("localhost").getRepository(type.name).find();
+                    resolve: (_: any, __: any, req: express.Request, info: graphql.GraphQLResolveInfo) => {
+                        if (!this.checkPermissions(req, ["GraphQL/" + type.name + "/Read"])) {
+                            throw new graphql.GraphQLError("Not allowed to access " + type.name, info.fieldNodes[0]);
+                        }
+                        return orm.getConnection(req.hostname).getRepository(type.name).find();
                     }
                 }
             }))))
         });
-        this.app.server.express.use("/graphql", expressGraphQL({
+        GraphQLLifecycle.middleware = expressGraphQL({
             schema: new graphql.GraphQLSchema({
                 query
             }),
             graphiql: true
-        }));
+        });
+    }
+
+    private checkPermissions(req: express.Request, permissions: string[]) {
+        const connection = orm.getConnection(req.hostname);
+        const user: db.User = <any>connection.getRepository(db.User).create(req.session.user);
+        return user.hasPermissions(permissions);
     }
 }
