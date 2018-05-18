@@ -54,14 +54,6 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                 const otherType = types.find(t => t.entity.tableName === relation.inverseEntityMetadata.tableName);
                 const currentColumn = relation.junctionEntityMetadata.columns.find(c => c.referencedColumn.entityMetadata.tableName === entity.tableName);
                 const targetColumn = relation.junctionEntityMetadata.columns.find(c => c.referencedColumn.entityMetadata.tableName === otherType.entity.tableName);
-                console.log({
-                    current: entity.name,
-                    target: otherType.entity.name,
-                    currentColumn: currentColumn.propertyName,
-                    currentRef: currentColumn.referencedColumn.databaseName,
-                    targetColumn: targetColumn.propertyName,
-                    targetRef: targetColumn.referencedColumn.databaseName
-                });
                 return {
                     key: relation.propertyName,
                     value: {
