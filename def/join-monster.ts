@@ -9,6 +9,7 @@ export interface GraphQLFieldConfig<A, B, C> extends graphql.GraphQLFieldConfig<
         sqlJoins: JoinGenerator[];
         sqlTable: string;
     };
+    where?(table: string, args: any): string | boolean;
 }
 
 export interface GraphQLFieldConfigMap<A, B> extends graphql.GraphQLFieldConfigMap<A, B> {

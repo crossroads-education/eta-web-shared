@@ -69,41 +69,61 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                 };
             })))
         })}));
-        const query = new graphql.GraphQLObjectType({
-            name: "RootQuery",
-            fields: eta.array.mapObject(types.map(type => ({
-                key: type.type.name,
-                value: {
-                    type: new graphql.GraphQLList(type.type),
-                    args: eta.array.mapObject(type.entity.ownColumns.filter(c => c.relationMetadata === undefined).map(col => ({
-                        key: col.propertyName,
-                        value: {
-                            type: this.getTypeFromColumn(<any>col, true),
-                        }
-                    }))),
-                    where: (table: string, args: {[key: string]: any}) => {
-                        if (Object.keys(args).length === 0) return false;
-                        return Object.keys(args).map(col =>
-                            `${table}."${col}" = ${typeof(args[col]) === "string" ? new pg.Client().escapeLiteral(args[col]) : args[col]}`
-                        ).join(" OR ");
-                    },
-                    resolve: (_: any, __: any, req: express.Request, info: graphql.GraphQLResolveInfo) => {
-                        if (!this.checkPermissions(req, ["GraphQL/" + type.type.name + "/Read"])) {
-                            throw new graphql.GraphQLError("Not allowed to access " + type.type.name, info.fieldNodes[0]);
-                        }
-                        return joinMonster(info, {}, sql =>
-                            orm.getConnection(req.hostname).query(sql)
-                        );
-                    }
-                }
-            })))
-        });
         GraphQLLifecycle.middleware = expressGraphQL({
             schema: new graphql.GraphQLSchema({
-                query
+                query: new graphql.GraphQLObjectType({
+                    name: "RootQuery",
+                    fields: eta.array.mapObject(types.map(type => ({
+                        key: type.type.name,
+                        value: this.setupQueryType(type)
+                    })))
+                })
             }),
             graphiql: true
         });
+    }
+
+    private setupQueryType(type: {
+        entity: orm.EntityMetadata;
+        type: JoinMonster.GraphQLObjectType
+    }): JoinMonster.GraphQLFieldConfig<any, any, any> {
+        const filter = {
+            name: "filter",
+            type: new graphql.GraphQLInputObjectType({
+                name: "FilterArgs" + type.type.name,
+                fields: eta.array.mapObject(type.entity.ownColumns.map(col => ({
+                    key: col.propertyName,
+                    value: {
+                        type: this.getTypeFromColumn(<any>col, true)
+                    }
+                })))
+            })
+        };
+        return {
+            type: new graphql.GraphQLList(type.type),
+            args: {
+                filter
+            },
+            where: (table: string, args: {
+                filter: {[key: string]: any};
+                search: {[key: string]: any};
+            }) => {
+                if (args.filter !== undefined && Object.keys(args.filter).length > 0) {
+                    return Object.keys(args.filter).map(col =>
+                        `${table}."${col}" = ${typeof(args.filter[col]) === "string" ? new pg.Client().escapeLiteral(args.filter[col]) : args.filter[col]}`
+                    ).join(" OR ");
+                }
+                return false;
+            },
+            resolve: (_: any, __: any, req: express.Request, info: graphql.GraphQLResolveInfo) => {
+                if (!this.checkPermissions(req, ["GraphQL/" + type.type.name + "/Read"])) {
+                    throw new graphql.GraphQLError("Not allowed to access " + type.type.name, info.fieldNodes[0]);
+                }
+                return joinMonster(info, {}, sql =>
+                    orm.getConnection(req.hostname).query(sql)
+                );
+            }
+        };
     }
 
     private checkPermissions(req: express.Request, permissions: string[]) {
