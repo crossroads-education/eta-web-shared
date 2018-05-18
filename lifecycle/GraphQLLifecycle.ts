@@ -24,35 +24,29 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
         const types: {
             entity: orm.EntityMetadata;
             type: JoinMonster.GraphQLObjectType
-        }[] = orm.getConnection("localhost").entityMetadatas.map(entity => ({ entity, type: new JoinMonster.GraphQLObjectType({
+        }[] = orm.getConnection("localhost").entityMetadatas.filter(e => e.tableType === "regular").map(entity => ({ entity, type: new JoinMonster.GraphQLObjectType({
             name: entity.name,
             sqlTable: `${entity.tableName}`,
             uniqueKey: entity.primaryColumns.map(c => `${c.databaseName}`),
             fields: () => eta.array.mapObject(entity.ownColumns.filter(c => c.relationMetadata === undefined).map<{
                 key: string,
                 value: JoinMonster.GraphQLFieldConfig<any, any, any>
-            }>(col => ({
+            }>(col => ({ // normal columns
                 key: col.propertyName,
                 value: {
                     type: this.getTypeFromColumn(<any>col),
                     sqlColumn: `${col.databaseName}`
                 }
-            })).concat(entity.ownColumns.filter(c => c.relationMetadata !== undefined).map<{
-                key: string,
-                value: JoinMonster.GraphQLFieldConfig<any, any, any>
-            }>(col => {
-                const otherType = types.find(t => t.entity.name === col.relationMetadata.inverseEntityMetadata.name);
-                let joinGenerator: JoinMonster.JoinGenerator;
-                // console.log(entity.name, otherType.name, col.propertyName, col.relationMetadata.isOwning, col.databaseName, col.referencedColumn.databaseName);
-                if (col.relationMetadata.isOwning) {
-                    joinGenerator = (current, target) => `${current}."${col.databaseName}" = ${target}."${col.referencedColumn.databaseName}"`;
-                } else {
-                    joinGenerator = (current, target) => `${target}."${col.referencedColumn.databaseName}" = ${current}."${col.databaseName}"`;
-                }
+            })).concat(entity.relations.filter(r => !r.isManyToMany).map(relation => { // one-to-one, one-to-many, many-to-one
+                const otherType = types.find(t => t.entity.name === relation.inverseEntityMetadata.name).type;
+                const joinGenerator: JoinMonster.JoinGenerator = (current, target) => (relation.isWithJoinColumn
+                    ? relation.joinColumns.map(col => `${current}."${col.databaseName}" = ${target}."${col.referencedColumn.databaseName}"`)
+                    : relation.inverseRelation.joinColumns.map(col => `${target}."${col.databaseName}" = ${current}."${col.referencedColumn.databaseName}"`)
+                ).join(" AND ");
                 return {
-                    key: col.propertyName,
+                    key: relation.propertyName,
                     value: {
-                        type: col.relationMetadata.relationType === "one-to-many" ? new graphql.GraphQLList(otherType.type) : otherType.type,
+                        type: relation.relationType === "one-to-many" ? new graphql.GraphQLList(otherType) : otherType,
                         sqlJoin: joinGenerator
                     }
                 };
@@ -67,14 +61,13 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                     args: eta.array.mapObject(type.entity.ownColumns.filter(c => c.relationMetadata === undefined).map(col => ({
                         key: col.propertyName,
                         value: {
-                            // type: type.type.getFields()[c.propertyName].type
                             type: this.getTypeFromColumn(<any>col, true),
                         }
                     }))),
                     where: (table: string, args: {[key: string]: any}) => {
                         if (Object.keys(args).length === 0) return false;
                         return Object.keys(args).map(col =>
-                            `${table}.${col} = ${typeof(args[col]) === "string" ? new pg.Client().escapeLiteral(args[col]) : args[col]}`
+                            `${table}."${col}" = ${typeof(args[col]) === "string" ? new pg.Client().escapeLiteral(args[col]) : args[col]}`
                         ).join(" OR ");
                     },
                     resolve: (_: any, __: any, req: express.Request, info: graphql.GraphQLResolveInfo) => {
