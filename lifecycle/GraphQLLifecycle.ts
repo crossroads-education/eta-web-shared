@@ -26,7 +26,7 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
             type: JoinMonster.GraphQLObjectType
         }[] = orm.getConnection("localhost").entityMetadatas.filter(e => e.tableType === "regular").map(entity => ({ entity, type: new JoinMonster.GraphQLObjectType({
             name: entity.name,
-            sqlTable: `${entity.tableName}`,
+            sqlTable: `"${entity.tableName}"`,
             uniqueKey: entity.primaryColumns.map(c => `${c.databaseName}`),
             fields: () => eta.array.mapObject(entity.ownColumns.filter(c => c.relationMetadata === undefined).map<{
                 key: string,
@@ -38,7 +38,7 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                     sqlColumn: `${col.databaseName}`
                 }
             })).concat(entity.relations.filter(r => !r.isManyToMany).map(relation => { // one-to-one, one-to-many, many-to-one
-                const otherType = types.find(t => t.entity.name === relation.inverseEntityMetadata.name).type;
+                const otherType = types.find(t => t.entity.tableName === relation.inverseEntityMetadata.tableName).type;
                 const joinGenerator: JoinMonster.JoinGenerator = (current, target) => (relation.isWithJoinColumn
                     ? relation.joinColumns.map(col => `${current}."${col.databaseName}" = ${target}."${col.referencedColumn.databaseName}"`)
                     : relation.inverseRelation.joinColumns.map(col => `${target}."${col.databaseName}" = ${current}."${col.referencedColumn.databaseName}"`)
@@ -48,6 +48,31 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                     value: {
                         type: relation.relationType === "one-to-many" ? new graphql.GraphQLList(otherType) : otherType,
                         sqlJoin: joinGenerator
+                    }
+                };
+            })).concat(entity.manyToManyRelations.map(relation => {
+                const otherType = types.find(t => t.entity.tableName === relation.inverseEntityMetadata.tableName);
+                const currentColumn = relation.junctionEntityMetadata.columns.find(c => c.referencedColumn.entityMetadata.tableName === entity.tableName);
+                const targetColumn = relation.junctionEntityMetadata.columns.find(c => c.referencedColumn.entityMetadata.tableName === otherType.entity.tableName);
+                console.log({
+                    current: entity.name,
+                    target: otherType.entity.name,
+                    currentColumn: currentColumn.propertyName,
+                    currentRef: currentColumn.referencedColumn.databaseName,
+                    targetColumn: targetColumn.propertyName,
+                    targetRef: targetColumn.referencedColumn.databaseName
+                });
+                return {
+                    key: relation.propertyName,
+                    value: {
+                        type: new graphql.GraphQLList(otherType.type),
+                        junction: {
+                            sqlTable: relation.joinTableName,
+                            sqlJoins: <JoinMonster.JoinGenerator[]>[
+                                (current, junction) => `${current}."${currentColumn.referencedColumn.databaseName}" = ${junction}."${currentColumn.databaseName}"`,
+                                (junction, target)  => `${junction}."${targetColumn.databaseName}" = ${target}."${targetColumn.referencedColumn.databaseName}"`
+                            ]
+                        }
                     }
                 };
             })))

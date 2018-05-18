@@ -4,7 +4,11 @@ export type JoinGenerator = (currentTable: string, targetTable: string, args: an
 
 export interface GraphQLFieldConfig<A, B, C> extends graphql.GraphQLFieldConfig<A, B, C> {
     sqlColumn?: string;
-    sqlJoin?: JoinGenerator | JoinGenerator[];
+    sqlJoin?: JoinGenerator;
+    junction?: {
+        sqlJoins: JoinGenerator[];
+        sqlTable: string;
+    };
 }
 
 export interface GraphQLFieldConfigMap<A, B> extends graphql.GraphQLFieldConfigMap<A, B> {
