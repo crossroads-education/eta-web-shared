@@ -72,10 +72,17 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
         GraphQLLifecycle.middleware = expressGraphQL({
             schema: new graphql.GraphQLSchema({
                 query: new graphql.GraphQLObjectType({
-                    name: "RootQuery",
+                    name: "Query",
                     fields: eta.array.mapObject(types.map(type => ({
                         key: type.type.name,
                         value: this.setupQueryType(type)
+                    })))
+                }),
+                mutation: new graphql.GraphQLObjectType({
+                    name: "Mutation",
+                    fields: eta.array.mapObject(types.map(type => ({
+                        key: "create" + type.type.name,
+                        value: this.setupCreateType(type)
                     })))
                 })
             }),
@@ -122,6 +129,27 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                 return joinMonster(info, {}, sql =>
                     orm.getConnection(req.hostname).query(sql)
                 );
+            }
+        };
+    }
+
+    private setupCreateType(type: {
+        entity: orm.EntityMetadata;
+        type: JoinMonster.GraphQLObjectType;
+    }): JoinMonster.GraphQLFieldConfig<any, any, any> {
+        return {
+            type: type.type,
+            args: eta.array.mapObject(type.entity.ownColumns.map(col => ({
+                key: col.propertyName,
+                value: {
+                    type: this.getTypeFromColumn(<any>col, col.isPrimary)
+                }
+            }))),
+            resolve: async (_: any, args: {[key: string]: any}, req: express.Request, info: graphql.GraphQLResolveInfo) => {
+                if (!this.checkPermissions(req, ["GraphQL/" + type.type.name + "/Update"])) {
+                    throw new graphql.GraphQLError("Not allowed to access " + type.type.name, info.fieldNodes[0]);
+                }
+                return orm.getConnection(req.hostname).getRepository(type.entity.target).save([args]).then(rows => rows[0]);
             }
         };
     }
