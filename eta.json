@@ -16,6 +16,12 @@
     ]
   },
   "dependencies": [],
-  "indexes": [],
+  "indexes": [
+    {
+      "filename": "lib/index.ts",
+      "type": "index",
+      "dirs": ["lib"]
+    }
+  ],
   "name": "cre-web-shared"
 }

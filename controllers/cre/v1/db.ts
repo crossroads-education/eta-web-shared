@@ -1,5 +1,5 @@
 import * as eta from "@eta/eta";
-import Seeder from "../../../lib/Seeder";
+import { Seeder } from "../../..";
 
 @eta.controller("/cre/v1/db")
 export default class CreDbController extends eta.HttpController {
