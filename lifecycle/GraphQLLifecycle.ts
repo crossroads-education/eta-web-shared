@@ -1,17 +1,21 @@
-/// <reference path="../def/join-monster.d.ts" />
-import * as JoinMonster from "../def/join-monster";
 import * as eta from "@eta/eta";
 import * as db from "@eta/db";
 import * as express from "express";
 import * as graphql from "graphql";
 import * as expressGraphQL from "express-graphql";
 import * as orm from "typeorm";
-import * as pg from "pg";
-import joinMonster from "join-monster";
 
 const BOOLEAN_TYPES = ["boolean", "bool", "Boolean"];
 const FLOAT_TYPES = ["decimal", "numeric", "real", "double precision", "float4", "float8", "money"];
 const INT_TYPES = ["int", "int2", "int4", "int8", "integer", "smallint", "bigint", "Number"];
+
+interface GraphQLType<Entity = any> {
+    entity: orm.EntityMetadata;
+    type: graphql.GraphQLObjectType;
+    auth: {
+        read: ((query: orm.SelectQueryBuilder<Entity>, req: express.Request) => typeof query) | undefined;
+    };
+}
 
 export default class GraphQLLifecycle extends eta.LifecycleHandler {
     static middleware: expressGraphQL.Middleware;
@@ -21,54 +25,37 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
     }
 
     async setupGraphQL() {
-        const types: {
-            entity: orm.EntityMetadata;
-            type: JoinMonster.GraphQLObjectType
-        }[] = orm.getConnection("localhost").entityMetadatas.filter(e => e.tableType === "regular").map(entity => ({ entity, type: new JoinMonster.GraphQLObjectType({
-            name: entity.name,
-            sqlTable: `"${entity.tableName}"`,
-            uniqueKey: entity.primaryColumns.map(c => `${c.databaseName}`),
-            fields: () => eta.array.mapObject(entity.ownColumns.filter(c => c.relationMetadata === undefined).map<{
-                key: string,
-                value: JoinMonster.GraphQLFieldConfig<any, any, any>
-            }>(col => ({ // normal columns
-                key: col.propertyName,
-                value: {
-                    type: this.getTypeFromColumn(<any>col),
-                    sqlColumn: `${col.databaseName}`
-                }
-            })).concat(entity.relations.filter(r => !r.isManyToMany).map(relation => { // one-to-one, one-to-many, many-to-one
-                const otherType = types.find(t => t.entity.tableName === relation.inverseEntityMetadata.tableName).type;
-                const joinGenerator: JoinMonster.JoinGenerator = (current, target) => (relation.isWithJoinColumn
-                    ? relation.joinColumns.map(col => `${current}."${col.databaseName}" = ${target}."${col.referencedColumn.databaseName}"`)
-                    : relation.inverseRelation.joinColumns.map(col => `${target}."${col.databaseName}" = ${current}."${col.referencedColumn.databaseName}"`)
-                ).join(" AND ");
-                return {
-                    key: relation.propertyName,
-                    value: {
-                        type: relation.relationType === "one-to-many" ? new graphql.GraphQLList(otherType) : otherType,
-                        sqlJoin: joinGenerator
-                    }
-                };
-            })).concat(entity.manyToManyRelations.map(relation => {
-                const otherType = types.find(t => t.entity.tableName === relation.inverseEntityMetadata.tableName);
-                const currentColumn = relation.junctionEntityMetadata.columns.find(c => c.referencedColumn.entityMetadata.tableName === entity.tableName);
-                const targetColumn = relation.junctionEntityMetadata.columns.find(c => c.referencedColumn.entityMetadata.tableName === otherType.entity.tableName);
-                return {
-                    key: relation.propertyName,
-                    value: {
-                        type: new graphql.GraphQLList(otherType.type),
-                        junction: {
-                            sqlTable: relation.joinTableName,
-                            sqlJoins: <JoinMonster.JoinGenerator[]>[
-                                (current, junction) => `${current}."${currentColumn.referencedColumn.databaseName}" = ${junction}."${currentColumn.databaseName}"`,
-                                (junction, target)  => `${junction}."${targetColumn.databaseName}" = ${target}."${targetColumn.referencedColumn.databaseName}"`
-                            ]
-                        }
-                    }
-                };
-            })))
-        })}));
+        const types: GraphQLType[] = orm.getConnection("localhost").entityMetadatas
+            .filter(e => e.tableType === "regular")
+            .map(entity => ({
+                entity,
+                auth: {
+                    read: Reflect.hasMetadata("graphql.read", entity.target)
+                        ? (<any>entity.target)[Reflect.getMetadata("graphql.read", entity.target)]
+                        : undefined
+                },
+                type: new graphql.GraphQLObjectType({
+                    name: entity.name,
+                    fields: () => eta.array.mapObject(entity.ownColumns
+                        .filter(c => c.relationMetadata === undefined)
+                        .map(col => ({
+                            key: col.propertyName,
+                            value: {
+                                type: this.getTypeFromColumn(<any>col) as graphql.GraphQLObjectType | graphql.GraphQLList<any>
+                            }
+                        })).concat(entity.relations.map(relation => {
+                            const otherType = types.find(t => t.entity.tableName === relation.inverseEntityMetadata.tableName);
+                            return {
+                                key: relation.propertyName,
+                                value: {
+                                    type: (relation.isOneToOne || relation.isManyToOne) ? otherType.type : new graphql.GraphQLList(otherType.type)
+                                }
+                            };
+                        }))
+                    )
+                })
+            })
+        );
         GraphQLLifecycle.middleware = expressGraphQL({
             schema: new graphql.GraphQLSchema({
                 query: new graphql.GraphQLObjectType({
@@ -90,10 +77,7 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
         });
     }
 
-    private setupQueryType(type: {
-        entity: orm.EntityMetadata;
-        type: JoinMonster.GraphQLObjectType
-    }): JoinMonster.GraphQLFieldConfig<any, any, any> {
+    private setupQueryType(type: GraphQLType): graphql.GraphQLFieldConfig<any, any, any> {
         const filter = {
             name: "filter",
             type: new graphql.GraphQLInputObjectType({
@@ -111,32 +95,33 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
             args: {
                 filter
             },
-            where: (table: string, args: {
-                filter: {[key: string]: any};
-                search: {[key: string]: any};
-            }) => {
-                if (args.filter !== undefined && Object.keys(args.filter).length > 0) {
-                    return Object.keys(args.filter).map(col =>
-                        `${table}."${col}" = ${typeof(args.filter[col]) === "string" ? new pg.Client().escapeLiteral(args.filter[col]) : args.filter[col]}`
-                    ).join(" OR ");
+            resolve: async (_: any, args: { filter: {[key: string]: any} }, req: express.Request, info: graphql.GraphQLResolveInfo) => {
+                if (type.auth.read === undefined) {
+                    throw new graphql.GraphQLError("Entity " + type.type.name + " is not available for querying.", info.fieldNodes[0]);
                 }
-                return false;
-            },
-            resolve: (_: any, __: any, req: express.Request, info: graphql.GraphQLResolveInfo) => {
-                if (!this.checkPermissions(req, ["GraphQL/" + type.type.name + "/Read"])) {
-                    throw new graphql.GraphQLError("Not allowed to access " + type.type.name, info.fieldNodes[0]);
-                }
-                return joinMonster(info, {}, sql =>
-                    orm.getConnection(req.hostname).query(sql)
-                );
+                const query = type.auth.read(orm.getConnection(req.hostname)
+                    .getRepository(type.entity.tableName)
+                    .createQueryBuilder(type.entity.tableName), req);
+                Object.keys(args.filter).map((col, index) => {
+                    query.orWhere(type.entity.tableName + "." + col + " = :arg" + index, { ["arg" + index]: args.filter[col] });
+                });
+                info.fieldNodes[0].selectionSet.selections
+                    .filter(s => (s as graphql.FieldNode).selectionSet !== undefined)
+                    .forEach(s => this.joinQuery(query, s as graphql.FieldNode, type.entity.tableName));
+                return query.getMany();
             }
         };
     }
 
-    private setupCreateType(type: {
-        entity: orm.EntityMetadata;
-        type: JoinMonster.GraphQLObjectType;
-    }): JoinMonster.GraphQLFieldConfig<any, any, any> {
+    private joinQuery(query: orm.SelectQueryBuilder<any>, selection: graphql.FieldNode, prefix: string) {
+        const newPrefix = prefix + "_" + selection.name.value;
+        query.leftJoinAndSelect(prefix + "." + selection.name.value, newPrefix);
+        selection.selectionSet.selections.forEach((sel: graphql.FieldNode) => {
+            if (sel.selectionSet) this.joinQuery(query, sel, newPrefix);
+        });
+    }
+
+    private setupCreateType(type: GraphQLType): graphql.GraphQLFieldConfig<any, any, any> {
         return {
             type: type.type,
             args: eta.array.mapObject(type.entity.ownColumns.map(col => ({
