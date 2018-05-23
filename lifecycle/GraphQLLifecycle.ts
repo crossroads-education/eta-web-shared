@@ -9,11 +9,17 @@ const BOOLEAN_TYPES = ["boolean", "bool", "Boolean"];
 const FLOAT_TYPES = ["decimal", "numeric", "real", "double precision", "float4", "float8", "money"];
 const INT_TYPES = ["int", "int2", "int4", "int8", "integer", "smallint", "bigint", "Number"];
 
+type AuthQueryCallback<Entity> = (query: orm.SelectQueryBuilder<Entity>, req: express.Request) => typeof query;
+
 interface GraphQLType<Entity = any> {
     entity: orm.EntityMetadata;
     type: graphql.GraphQLObjectType;
     auth: {
-        read: ((query: orm.SelectQueryBuilder<Entity>, req: express.Request) => typeof query) | undefined;
+        // can't do a WHERE on create, so we have to check more generically
+        create: ((req: express.Request, attempt: Partial<Entity>) => Promise<boolean>) | undefined;
+        delete: AuthQueryCallback<Entity> | undefined;
+        read: AuthQueryCallback<Entity> | undefined;
+        update: AuthQueryCallback<Entity> | undefined;
     };
 }
 
@@ -30,9 +36,10 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
             .map(entity => ({
                 entity,
                 auth: {
-                    read: Reflect.hasMetadata("graphql.read", entity.target)
-                        ? (<any>entity.target)[Reflect.getMetadata("graphql.read", entity.target)]
-                        : undefined
+                    create: (<any>entity.target)[Reflect.getMetadata("graphql.create", entity.target)],
+                    delete: (<any>entity.target)[Reflect.getMetadata("graphql.delete", entity.target)],
+                    read: (<any>entity.target)[Reflect.getMetadata("graphql.read", entity.target)],
+                    update: (<any>entity.target)[Reflect.getMetadata("graphql.update", entity.target)]
                 },
                 type: new graphql.GraphQLObjectType({
                     name: entity.name,
