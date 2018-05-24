@@ -1,5 +1,4 @@
 import * as eta from "@eta/eta";
-import * as db from "@eta/db";
 import * as express from "express";
 import * as graphql from "graphql";
 import * as expressGraphQL from "express-graphql";
