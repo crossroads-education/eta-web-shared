@@ -30,7 +30,8 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
     }
 
     async setupGraphQL() {
-        const types: GraphQLType[] = orm.getConnection("localhost").entityMetadatas
+        const connection = orm.getConnection(Object.keys(this.app.configs).find(k => k !== "global"));
+        const types: GraphQLType[] = connection.entityMetadatas
             .filter(e => e.tableType === "regular")
             .map(entity => ({
                 entity,
