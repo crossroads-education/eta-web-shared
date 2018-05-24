@@ -9,7 +9,7 @@ const BOOLEAN_TYPES = ["boolean", "bool", "Boolean"];
 const FLOAT_TYPES = ["decimal", "numeric", "real", "double precision", "float4", "float8", "money"];
 const INT_TYPES = ["int", "int2", "int4", "int8", "integer", "smallint", "bigint", "Number"];
 
-type AuthQueryCallback<Entity> = (query: orm.SelectQueryBuilder<Entity>, req: express.Request) => Promise<typeof query>;
+type AuthQueryCallback<Query> = (query: Query, req: express.Request) => Promise<typeof query>;
 
 interface GraphQLType<Entity = any> {
     entity: orm.EntityMetadata;
@@ -17,9 +17,9 @@ interface GraphQLType<Entity = any> {
     auth: {
         // can't do a WHERE on create, so we have to check more generically
         create: ((req: express.Request, attempt: Partial<Entity>) => Promise<boolean>) | undefined;
-        delete: AuthQueryCallback<Entity> | undefined;
-        read: AuthQueryCallback<Entity> | undefined;
-        update: AuthQueryCallback<Entity> | undefined;
+        delete: AuthQueryCallback<orm.DeleteQueryBuilder<Entity>> | undefined;
+        read: AuthQueryCallback<orm.SelectQueryBuilder<Entity>> | undefined;
+        update: AuthQueryCallback<orm.UpdateQueryBuilder<Entity>> | undefined;
     };
 }
 
@@ -77,7 +77,10 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                     fields: eta.array.mapObject(types.map(type => ({
                         key: "create" + type.type.name,
                         value: this.setupCreateType(type)
-                    })))
+                    })).concat(types.map(type => ({
+                        key: "update" + type.type.name,
+                        value: this.setupUpdateType(type)
+                    }))))
                 })
             }),
             graphiql: true
@@ -109,11 +112,11 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                 try {
                     const query = await type.auth.read(orm.getConnection(req.hostname)
                         .getRepository(type.entity.tableName)
-                        .createQueryBuilder(type.entity.tableName), req);
+                        .createQueryBuilder(), req);
                     if (args.filter !== undefined) {
                         query.andWhere(new orm.Brackets(qb => {
                             Object.keys(args.filter).map((col, index) => {
-                                qb.orWhere(type.entity.tableName + "." + col + " = :arg" + index, { ["arg" + index]: args.filter[col] });
+                                qb.orWhere(`${type.entity.tableName}."${col}" = :arg${index}`, { ["arg" + index]: args.filter[col] });
                             });
                         }));
                     }
@@ -129,14 +132,6 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
         };
     }
 
-    private joinQuery(query: orm.SelectQueryBuilder<any>, selection: graphql.FieldNode, prefix: string) {
-        const newPrefix = prefix + "_" + selection.name.value;
-        query.leftJoinAndSelect(prefix + "." + selection.name.value, newPrefix);
-        selection.selectionSet.selections.forEach((sel: graphql.FieldNode) => {
-            if (sel.selectionSet) this.joinQuery(query, sel, newPrefix);
-        });
-    }
-
     private setupCreateType(type: GraphQLType): graphql.GraphQLFieldConfig<any, any, any> {
         return {
             type: type.type,
@@ -147,18 +142,55 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                 }
             }))),
             resolve: async (_: any, args: {[key: string]: any}, req: express.Request, info: graphql.GraphQLResolveInfo) => {
-                if (!this.checkPermissions(req, ["GraphQL/" + type.type.name + "/Update"])) {
-                    throw new graphql.GraphQLError("Not allowed to access " + type.type.name, info.fieldNodes[0]);
+                if (type.auth.create === undefined) {
+                    throw new graphql.GraphQLError("Entity " + type.type.name + " is not available for creating.", info.fieldNodes[0]);
+                }
+                if (!await type.auth.create(req, args)) {
+                    throw new graphql.GraphQLError("Cannot create entity of type " + type.type.name, info.fieldNodes[0]);
                 }
                 return orm.getConnection(req.hostname).getRepository(type.entity.target).save([args]).then(rows => rows[0]);
             }
         };
     }
 
-    private checkPermissions(req: express.Request, permissions: string[]) {
-        const connection = orm.getConnection(req.hostname);
-        const user: db.User = <any>connection.getRepository(db.User).create(req.session.user);
-        return user.hasPermissions(permissions);
+    private setupUpdateType(type: GraphQLType): graphql.GraphQLFieldConfig<any, any, any> {
+        return {
+            type: type.type,
+            args: eta.array.mapObject(type.entity.ownColumns.map(col => ({
+                key: col.propertyName,
+                value: {
+                    type: this.getTypeFromColumn(<any>col, !col.isGenerated)
+                }
+            }))),
+            resolve: async (_: any, args: {[key: string]: any}, req: express.Request, info: graphql.GraphQLResolveInfo) => {
+                if (type.auth.update === undefined) {
+                    throw new graphql.GraphQLError("Entity " + type.type.name + " is not available for updating.", info.fieldNodes[0]);
+                }
+                const query = await type.auth.update(orm.getConnection(req.hostname)
+                    .getRepository(type.entity.target)
+                    .createQueryBuilder().update(), req);
+                const columns = type.entity.ownColumns.filter(c => c.propertyName in args);
+                query.returning(columns.filter(c => c.isGenerated).map(c => c.databaseName));
+                query.andWhere(new orm.Brackets(qb => {
+                    columns.filter(c => c.isGenerated).forEach((col, index) =>
+                        qb.orWhere(`"${col.databaseName}" = :arg${index}`, { ["arg" + index]: args[col.propertyName] }));
+                    return qb;
+                }));
+                query.set(eta.array.mapObject(columns.filter(c => !c.isGenerated).map(col => ({
+                    key: col.propertyName,
+                    value: args[col.propertyName]
+                }))));
+                return query.execute().then(r => r.raw[0]);
+            }
+        };
+    }
+
+    private joinQuery(query: orm.SelectQueryBuilder<any>, selection: graphql.FieldNode, prefix: string) {
+        const newPrefix = prefix + "_" + selection.name.value;
+        query.leftJoinAndSelect(prefix + "." + selection.name.value, newPrefix);
+        selection.selectionSet.selections.forEach((sel: graphql.FieldNode) => {
+            if (sel.selectionSet) this.joinQuery(query, sel, newPrefix);
+        });
     }
 
     private getTypeFromColumn(col: orm.TableColumn, allowNull = false) {
