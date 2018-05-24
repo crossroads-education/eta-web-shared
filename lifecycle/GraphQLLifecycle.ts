@@ -8,7 +8,7 @@ const BOOLEAN_TYPES = ["boolean", "bool", "Boolean"];
 const FLOAT_TYPES = ["decimal", "numeric", "real", "double precision", "float4", "float8", "money"];
 const INT_TYPES = ["int", "int2", "int4", "int8", "integer", "smallint", "bigint", "Number"];
 
-type AuthQueryCallback<Query> = (query: Query, req: express.Request) => Promise<typeof query>;
+type AuthQueryCallback<Entity> = (query: orm.SelectQueryBuilder<Entity>, req: express.Request) => Promise<typeof query>;
 
 interface GraphQLType<Entity = any> {
     entity: orm.EntityMetadata;
@@ -16,9 +16,9 @@ interface GraphQLType<Entity = any> {
     auth: {
         // can't do a WHERE on create, so we have to check more generically
         create: ((req: express.Request, attempt: Partial<Entity>) => Promise<boolean>) | undefined;
-        delete: AuthQueryCallback<orm.DeleteQueryBuilder<Entity>> | undefined;
-        read: AuthQueryCallback<orm.SelectQueryBuilder<Entity>> | undefined;
-        update: AuthQueryCallback<orm.UpdateQueryBuilder<Entity>> | undefined;
+        delete: AuthQueryCallback<Entity> | undefined;
+        read: AuthQueryCallback<Entity> | undefined;
+        update: AuthQueryCallback<Entity> | undefined;
     };
 }
 
@@ -111,13 +111,14 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                 }
                 try {
                     const query = await type.auth.read(orm.getConnection(req.hostname)
-                        .getRepository(type.entity.tableName)
-                        .createQueryBuilder(), req);
+                        .getRepository(type.entity.target)
+                        .createQueryBuilder(type.entity.tableName), req);
                     if (args.filter !== undefined) {
                         query.andWhere(new orm.Brackets(qb => {
                             Object.keys(args.filter).map((col, index) => {
                                 qb.orWhere(`${type.entity.tableName}."${col}" = :arg${index}`, { ["arg" + index]: args.filter[col] });
                             });
+                            return qb;
                         }));
                     }
                     info.fieldNodes[0].selectionSet.selections
@@ -166,16 +167,22 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                 if (type.auth.update === undefined) {
                     throw new graphql.GraphQLError("Entity " + type.type.name + " is not available for updating.", info.fieldNodes[0]);
                 }
-                const query = await type.auth.update(orm.getConnection(req.hostname)
-                    .getRepository(type.entity.target)
-                    .createQueryBuilder().update(), req);
                 const columns = type.entity.ownColumns.filter(c => c.propertyName in args);
+                const repo = orm.getConnection(req.hostname).getRepository(type.entity.target);
+                const idQuery = repo.createQueryBuilder(type.entity.tableName).select(type.entity.tableName + ".id", "id");
+                await type.auth.update(idQuery, req);
+                if (columns.some(c => c.isGenerated)) {
+                    idQuery.andWhere(new orm.Brackets(qb => {
+                        columns.filter(c => c.isGenerated).forEach((col, index) => {
+                            qb.orWhere(`${type.entity.tableName}."${col.databaseName}" = :arg${index}`, { ["arg" + index]: args[col.propertyName] });
+                        });
+                        return qb;
+                    }));
+                }
+                const ids = await idQuery.getRawMany().then(arr => arr.map(i => i.id));
+                const query = repo.createQueryBuilder(type.entity.tableName).update()
+                    .whereInIds(ids);
                 query.returning(columns.filter(c => c.isGenerated).map(c => c.databaseName));
-                query.andWhere(new orm.Brackets(qb => {
-                    columns.filter(c => c.isGenerated).forEach((col, index) =>
-                        qb.orWhere(`"${col.databaseName}" = :arg${index}`, { ["arg" + index]: args[col.propertyName] }));
-                    return qb;
-                }));
                 query.set(eta.array.mapObject(columns.filter(c => !c.isGenerated).map(col => ({
                     key: col.propertyName,
                     value: args[col.propertyName]
