@@ -9,7 +9,7 @@ const BOOLEAN_TYPES = ["boolean", "bool", "Boolean"];
 const FLOAT_TYPES = ["decimal", "numeric", "real", "double precision", "float4", "float8", "money"];
 const INT_TYPES = ["int", "int2", "int4", "int8", "integer", "smallint", "bigint", "Number"];
 
-type AuthQueryCallback<Entity> = (query: orm.SelectQueryBuilder<Entity>, req: express.Request) => typeof query;
+type AuthQueryCallback<Entity> = (query: orm.SelectQueryBuilder<Entity>, req: express.Request) => Promise<typeof query>;
 
 interface GraphQLType<Entity = any> {
     entity: orm.EntityMetadata;
@@ -106,16 +106,25 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                 if (type.auth.read === undefined) {
                     throw new graphql.GraphQLError("Entity " + type.type.name + " is not available for querying.", info.fieldNodes[0]);
                 }
-                const query = type.auth.read(orm.getConnection(req.hostname)
-                    .getRepository(type.entity.tableName)
-                    .createQueryBuilder(type.entity.tableName), req);
-                Object.keys(args.filter).map((col, index) => {
-                    query.orWhere(type.entity.tableName + "." + col + " = :arg" + index, { ["arg" + index]: args.filter[col] });
-                });
-                info.fieldNodes[0].selectionSet.selections
-                    .filter(s => (s as graphql.FieldNode).selectionSet !== undefined)
-                    .forEach(s => this.joinQuery(query, s as graphql.FieldNode, type.entity.tableName));
-                return query.getMany();
+                try {
+                    const query = await type.auth.read(orm.getConnection(req.hostname)
+                        .getRepository(type.entity.tableName)
+                        .createQueryBuilder(type.entity.tableName), req);
+                    if (args.filter !== undefined) {
+                        query.andWhere(new orm.Brackets(qb => {
+                            Object.keys(args.filter).map((col, index) => {
+                                qb.orWhere(type.entity.tableName + "." + col + " = :arg" + index, { ["arg" + index]: args.filter[col] });
+                            });
+                        }));
+                    }
+                    info.fieldNodes[0].selectionSet.selections
+                        .filter(s => (s as graphql.FieldNode).selectionSet !== undefined)
+                        .forEach(s => this.joinQuery(query, s as graphql.FieldNode, type.entity.tableName));
+                    return query.getMany();
+                } catch (err) {
+                    eta.logger.error(err); // GraphQL gives very poor error stacktraces by default
+                    throw err;
+                }
             }
         };
     }
