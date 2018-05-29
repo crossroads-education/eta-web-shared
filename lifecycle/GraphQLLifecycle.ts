@@ -116,7 +116,8 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                     if (args.filter !== undefined) {
                         query.andWhere(new orm.Brackets(qb => {
                             Object.keys(args.filter).map((col, index) => {
-                                qb.orWhere(`${type.entity.tableName}."${col}" = :arg${index}`, { ["arg" + index]: args.filter[col] });
+                                const column = type.entity.ownColumns.find(c => c.propertyName === col);
+                                qb.orWhere(`${type.entity.tableName}."${column.databaseName}" = :arg${index}`, { ["arg" + index]: args.filter[col] });
                             });
                             return qb;
                         }));
