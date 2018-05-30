@@ -117,7 +117,7 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                         query.andWhere(new orm.Brackets(qb => {
                             Object.keys(args.filter).map((col, index) => {
                                 const column = type.entity.ownColumns.find(c => c.propertyName === col);
-                                qb.orWhere(`${type.entity.tableName}."${column.databaseName}" = :arg${index}`, { ["arg" + index]: args.filter[col] });
+                                qb.andWhere(`${type.entity.tableName}."${column.databaseName}" = :arg${index}`, { ["arg" + index]: args.filter[col] });
                             });
                             return qb;
                         }));
@@ -175,7 +175,7 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                 if (columns.some(c => c.isGenerated)) {
                     idQuery.andWhere(new orm.Brackets(qb => {
                         columns.filter(c => c.isGenerated).forEach((col, index) => {
-                            qb.orWhere(`${type.entity.tableName}."${col.databaseName}" = :arg${index}`, { ["arg" + index]: args[col.propertyName] });
+                            qb.andWhere(`${type.entity.tableName}."${col.databaseName}" = :arg${index}`, { ["arg" + index]: args[col.propertyName] });
                         });
                         return qb;
                     }));
