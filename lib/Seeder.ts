@@ -31,9 +31,12 @@ export default class Seeder extends events.EventEmitter {
         this.emit("end");
     }
 
-    public async seed<T>(repository: orm.Repository<T>, items: T[], transformer: (query: orm.SelectQueryBuilder<T>) => orm.SelectQueryBuilder<T> = qb => qb): Promise<void> {
+    public async seed<T>(repository: orm.Repository<T>, items: T[],
+        transformer: (query: orm.SelectQueryBuilder<T>) => typeof query = qb => qb,
+        dump?: (repository: orm.Repository<T>, items: T[]) => Promise<any>
+    ): Promise<void> {
         const typeName: string = typeof repository.target === "string" ? repository.target : repository.target.name;
-        await eta.EntityCache.dumpMany(repository, items, false);
+        await (dump ? dump(repository, items) : eta.EntityCache.dumpMany(repository, items, false));
         const insertedItems: T[] = await transformer(repository.createQueryBuilder("entity")).getMany();
         (<any>this.rows)[typeName] = insertedItems;
         this.emit("progress", {
