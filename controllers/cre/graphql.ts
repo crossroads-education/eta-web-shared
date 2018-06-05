@@ -9,7 +9,7 @@ export default class CreGraphQLController extends eta.HttpController {
         isAuthRequired: true
     })
     async get() {
-        await GraphQLLifecycle.middleware(this.req, this.res);
+        await GraphQLLifecycle.middleware(<any>this.req, this.res);
         this.res.locals.finished = true;
     }
 
