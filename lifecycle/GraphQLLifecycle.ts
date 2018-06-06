@@ -67,17 +67,17 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
             schema: new graphql.GraphQLSchema({
                 query: new graphql.GraphQLObjectType({
                     name: "Query",
-                    fields: eta.array.mapObject(types.map(type => ({
+                    fields: eta.array.mapObject(types.filter(t => t.auth.read).map(type => ({
                         key: type.type.name,
                         value: this.setupQueryType(type)
                     })))
                 }),
                 mutation: new graphql.GraphQLObjectType({
                     name: "Mutation",
-                    fields: eta.array.mapObject(types.map(type => ({
+                    fields: eta.array.mapObject(types.filter(t => t.auth.create).map(type => ({
                         key: "create" + type.type.name,
                         value: this.setupCreateType(type)
-                    })).concat(types.map(type => ({
+                    })).concat(types.filter(t => t.auth.update).map(type => ({
                         key: "update" + type.type.name,
                         value: this.setupUpdateType(type)
                     }))))
@@ -117,7 +117,7 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                         query.andWhere(new orm.Brackets(qb => {
                             Object.keys(args.filter).map((col, index) => {
                                 const column = type.entity.ownColumns.find(c => c.propertyName === col);
-                                qb.andWhere(`${type.entity.tableName}."${column.databaseName}" = :arg${index}`, { ["arg" + index]: args.filter[col] });
+                                qb.andWhere(`"${type.entity.tableName}"."${column.databaseName}" = :arg${index}`, { ["arg" + index]: args.filter[col] });
                             });
                             return qb;
                         }));
@@ -127,7 +127,7 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                         .forEach(s => this.joinQuery(query, s as graphql.FieldNode, type.entity.tableName));
                     return query.getMany();
                 } catch (err) {
-                    eta.logger.error(err); // GraphQL gives very poor error stacktraces by default
+                    console.error(err); // GraphQL gives very poor error stacktraces by default
                     throw err;
                 }
             }
