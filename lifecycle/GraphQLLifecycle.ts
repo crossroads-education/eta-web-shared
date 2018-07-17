@@ -3,6 +3,7 @@ import * as express from "express";
 import * as graphql from "graphql";
 import * as expressGraphQL from "express-graphql";
 import * as orm from "typeorm";
+import { CrudDecoratorOptions } from "../lib/decorators/graphql";
 
 const BOOLEAN_TYPES = ["boolean", "bool", "Boolean"];
 const FLOAT_TYPES = ["decimal", "numeric", "real", "double precision", "float4", "float8", "money"];
@@ -15,7 +16,7 @@ interface GraphQLType<Entity = any> {
     type: graphql.GraphQLObjectType;
     auth: {
         // can't do a WHERE on create, so we have to check more generically
-        create: ((req: express.Request, attempt: Partial<Entity>) => Promise<boolean>) | undefined;
+        create: ((attempt: Partial<Entity>, req: express.Request) => Promise<boolean>) | undefined;
         delete: AuthQueryCallback<Entity> | undefined;
         read: AuthQueryCallback<Entity> | undefined;
         update: AuthQueryCallback<Entity> | undefined;
@@ -36,10 +37,10 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
             .map(entity => ({
                 entity,
                 auth: {
-                    create: (<any>entity.target)[Reflect.getMetadata("graphql.create", entity.target)],
-                    delete: (<any>entity.target)[Reflect.getMetadata("graphql.delete", entity.target)],
-                    read: (<any>entity.target)[Reflect.getMetadata("graphql.read", entity.target)],
-                    update: (<any>entity.target)[Reflect.getMetadata("graphql.update", entity.target)]
+                    create: this.buildAuthHandler(entity, "Create"),
+                    delete: this.buildAuthHandler(entity, "Delete"),
+                    read: this.buildAuthHandler(entity, "Read"),
+                    update: this.buildAuthHandler(entity, "Update")
                 },
                 type: new graphql.GraphQLObjectType({
                     name: entity.name,
@@ -85,6 +86,19 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
             }),
             graphiql: true
         });
+    }
+
+    private buildAuthHandler(entity: orm.EntityMetadata, type: "Create" | "Delete" | "Read" | "Update") {
+        const callback = (entity.target as any)[Reflect.getMetadata("graphql." + type.toLowerCase(), entity.target)];
+        if (!callback) return callback;
+        const options: CrudDecoratorOptions = Reflect.getMetadata("graphql-options." + type.toLowerCase(), entity.target);
+        if (!options.permission) return callback;
+        const permission = options.permission === true ? `GraphQL/${entity.name}/${type}` : options.permission;
+        return async (item: any, req: express.Request) => {
+            const isAuthorized = req.session.user.hasCurrentPosition() && req.session.user.hasPermissions([permission]);
+            if (!isAuthorized) return type === "Create" ? false : item.where(`"${item.alias}".id = -1`);
+            return callback(item, req);
+        };
     }
 
     private setupQueryType(type: GraphQLType): graphql.GraphQLFieldConfig<any, any, any> {
@@ -147,7 +161,7 @@ export default class GraphQLLifecycle extends eta.LifecycleHandler {
                 if (type.auth.create === undefined) {
                     throw new graphql.GraphQLError("Entity " + type.type.name + " is not available for creating.", info.fieldNodes[0]);
                 }
-                if (!await type.auth.create(req, args)) {
+                if (!await type.auth.create(args, req)) {
                     throw new graphql.GraphQLError("Cannot create entity of type " + type.type.name, info.fieldNodes[0]);
                 }
                 return orm.getConnection(req.hostname).getRepository(type.entity.target).save([args]).then(rows => rows[0]);
