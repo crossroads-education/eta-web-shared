@@ -40,7 +40,7 @@ function setupForm($form: JQuery): void {
         return;
     }
     $form.find(".form-control").on("keypress", (evt: JQuery.Event) => {
-        if (evt.which === JQuery.Key.Enter) {
+        if (evt.which === 13) { // enter
             $form.find(".btn-submit").click();
         }
     });
