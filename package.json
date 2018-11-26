@@ -10,5 +10,13 @@
   ],
   "engines": {
     "node": ">=8.4.0"
+  },
+  "dependencies": {
+    "express-graphql": "^0.6.12",
+    "graphql": "^0.13.2"
+  },
+  "devDependencies": {
+    "@types/express-graphql": "^0.6.1",
+    "@types/graphql": "^0.13.1"
   }
 }

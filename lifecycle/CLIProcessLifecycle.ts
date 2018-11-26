@@ -14,9 +14,9 @@ export default class CLIProcessLifecycle extends eta.LifecycleHandler {
 
     private onProcessMessage(msg: string): void {
         if (typeof(msg) !== "string" || !msg.startsWith("eta:cre:")) return;
-        const controllerPartial = {
+        const controllerPartial: Partial<eta.HttpController> = {
             db: new db.RepositoryManager("localhost"),
-            server: this.app.server
+            app: this.app
         };
         let promise: Promise<void>;
         if (msg.endsWith(":seed")) {

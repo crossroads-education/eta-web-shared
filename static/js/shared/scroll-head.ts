@@ -20,7 +20,7 @@ interface JQuery {
             $("#body").append(fixedHeadContainer);
             $(document.body).trigger("scrollHead.loaded");
             $(window).on("scroll", () => {
-                const $window: JQuery = $(window);
+                const $window = $(window);
                 const offset: number = $window.scrollTop();
                 if (offset >= tableOffset && fixedHeadContainer.is(":hidden")) {
                     fixedHeadContainer.show();
