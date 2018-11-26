@@ -4,9 +4,9 @@ const PermissionsTransformer = (prefix: string): ClassDecorator => {
     return (target: any) => {
         eta.object.recursiveKeys(target).forEach(keys => {
             const item = keys.slice(0, -1).reduce((p, v) => p[v], target);
-            const last_key = keys[keys.length - 1];
-            if (typeof(item[last_key]) !== "string") return;
-            item[last_key] = prefix + keys.join("/");
+            const lastKey = keys[keys.length - 1];
+            if (typeof(item[lastKey]) !== "string") return;
+            item[lastKey] = prefix + keys.join("/");
         });
     };
 };
