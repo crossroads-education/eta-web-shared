@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import PermissionsTransformer from "../../lib/PermissionsTransformer";
 
-describe.only("PermissionsTransformer", () => {
+describe("PermissionsTransformer", () => {
     @PermissionsTransformer("Element/")
     class ElementPermission {
         static Analytics = {
